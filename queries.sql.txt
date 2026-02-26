@@ -1,0 +1,144 @@
+-- =========================
+-- RetailDB Analysis Queries
+-- =========================
+
+-- a) Normal Queries
+-- 1. Fetch all products along with their supplier name (INNER JOIN).
+SELECT p.product_id, p.product_name, p.category, p.price,
+       s.supplier_name
+FROM Products p
+INNER JOIN Suppliers s
+ON p.supplier_id = s.supplier_id;
+
+-- 2. Find all customers and their orders, even if they have not placed any (LEFT JOIN).
+SELECT c.customer_id, c.name, o.order_id, o.order_date, o.total_amount
+FROM Customers c
+LEFT JOIN Orders o
+ON c.customer_id = o.customer_id;
+
+-- 3. Get all suppliers and the products they supply, even if no products exist for a supplier (RIGHT JOIN).
+SELECT s.supplier_id, s.supplier_name, p.product_name
+FROM Products p
+RIGHT JOIN Suppliers s
+ON p.supplier_id = s.supplier_id;
+
+-- 4. Show all customers and all orders (FULL OUTER JOIN simulation using UNION).
+SELECT c.customer_id, c.name, o.order_id
+FROM Customers c
+LEFT JOIN Orders o
+ON c.customer_id = o.customer_id
+
+UNION
+
+SELECT c.customer_id, c.name, o.order_id
+FROM Customers c
+RIGHT JOIN Orders o
+ON c.customer_id = o.customer_id;
+
+-- 5. Products priced between ₹5000 and ₹50,000 and supplied from Mumbai
+SELECT p.product_name, p.price, s.city
+FROM Products p
+JOIN Suppliers s
+ON p.supplier_id = s.supplier_id
+WHERE p.price BETWEEN 5000 AND 50000
+AND s.city = 'Mumbai';
+
+-- 6. Customers who placed more than 2 orders
+SELECT customer_id, COUNT(order_id) AS total_orders
+FROM Orders
+GROUP BY customer_id
+HAVING COUNT(order_id) > 2;
+
+-- 7. Each supplier’s total sales value
+SELECT s.supplier_name,
+       SUM(oi.quantity * oi.price_each) AS total_sales
+FROM Suppliers s
+JOIN Products p ON s.supplier_id = p.supplier_id
+JOIN Order_Items oi ON p.product_id = oi.product_id
+GROUP BY s.supplier_name;
+
+-- 8. Avg, highest, lowest product price per category
+SELECT category,
+       AVG(price) AS avg_price,
+       MAX(price) AS max_price,
+       MIN(price) AS min_price
+FROM Products
+GROUP BY category;
+
+-- 9. Top 5 customers by total spending
+SELECT c.customer_id, c.name,
+       SUM(o.total_amount) AS total_spent
+FROM Customers c
+JOIN Orders o
+ON c.customer_id = o.customer_id
+GROUP BY c.customer_id, c.name
+ORDER BY total_spent DESC
+LIMIT 5;
+
+-- 10. Number of unique products ordered by each customer
+SELECT o.customer_id,
+       COUNT(DISTINCT oi.product_id) AS unique_products
+FROM Orders o
+JOIN Order_Items oi
+ON o.order_id = oi.order_id
+GROUP BY o.customer_id;
+
+-- 11. Customers who placed orders above average order amount
+SELECT DISTINCT customer_id
+FROM Orders
+WHERE total_amount >
+      (SELECT AVG(total_amount) FROM Orders);
+      
+-- 12. Products that have never been ordered
+SELECT product_id, product_name
+FROM Products
+WHERE product_id NOT IN
+      (SELECT DISTINCT product_id FROM Order_Items);
+	
+-- 13. Customers who ordered Electronics products
+SELECT DISTINCT c.customer_id, c.name
+FROM Customers c
+JOIN Orders o ON c.customer_id = o.customer_id
+JOIN Order_Items oi ON o.order_id = oi.order_id
+JOIN Products p ON oi.product_id = p.product_id
+WHERE p.category = 'Electronics';
+
+-- 14. Suppliers whose products ordered more than 100 times
+SELECT DISTINCT s.supplier_name
+FROM Suppliers s
+JOIN Products p ON s.supplier_id = p.supplier_id
+JOIN Order_Items oi ON p.product_id = oi.product_id
+GROUP BY s.supplier_name
+HAVING SUM(oi.quantity) > 100;
+
+-- 15. Most expensive product(s)
+SELECT product_id, product_name, price
+FROM Products
+WHERE price = (SELECT MAX(price) FROM Products);
+
+-- 16. Orders by customers from Mumbai, Delhi, Bengaluru
+SELECT o.*
+FROM Orders o
+JOIN Customers c ON o.customer_id = c.customer_id
+WHERE c.city IN ('Mumbai', 'Delhi', 'Bengaluru');
+
+-- 17. Orders where payment mode is NOT UPI or Credit Card
+SELECT *
+FROM Orders
+WHERE payment_mode NOT IN ('UPI', 'Credit Card');
+
+-- 18. Customers with no email
+SELECT *
+FROM Customers
+WHERE email IS NULL;
+
+-- 19. Suppliers not from same city as any customer
+SELECT *
+FROM Suppliers
+WHERE city NOT IN (SELECT DISTINCT city FROM Customers);
+
+-- 20. Latest 3 orders skipping first 2
+SELECT *
+FROM Orders
+ORDER BY order_date DESC
+LIMIT 3 OFFSET 2;
